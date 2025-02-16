@@ -27,17 +27,19 @@ type (
 	errMsg error
 )
 
-func initialModel(service *opcservice.Service) model {
+func initialModel() model {
 	connectionText := textinput.New()
 	connectionText.Placeholder = "opc.tcp://127.0.0.1:4840"
+	connectionText.SetValue("opc.tcp://127.0.0.1:4840")
 	connectionText.CharLimit = 128
 	connectionText.Width = 50
 	connectionText.Focus()
-	return model{nav: ui.NewNavigation(),service: service, connectionTextInput: connectionText, state: ui.ViewStateBrowse}
+	return model{nav: ui.NewNavigation(), connectionTextInput: connectionText, state: ui.ViewStateConnection}
 }
 
+
 func (m model) Init() tea.Cmd {
-	return m.fetchChildren(m.nav.CurrentNode().NodeID)
+	return textinput.Blink
 }
 
 func (m model) fetchChildren(nodeID *ua.NodeID) tea.Cmd {
@@ -166,6 +168,13 @@ func (m model) updateConnectionView(msg tea.Msg) (tea.Model, tea.Cmd){
 		switch msg.String(){
 		case "q":
 			return m, tea.Quit
+		case "enter":
+			newModel := m
+			newModel = newModel.connectService(newModel.connectionTextInput.Value())
+
+			cmd  = newModel.fetchChildren(newModel.nav.CurrentNode().NodeID)
+			newModel.state = ui.ViewStateBrowse
+			return newModel, cmd
 		}
 	case errMsg:
 		m.err = msg
@@ -186,15 +195,17 @@ func (m model) readNodeValue(nodeID *ua.NodeID) (string) {
 	return value
 }
 
-func main() {
-	endpoint := "opc.tcp://localhost:4840"
+func (m model) connectService(endpoint string) model{
 	service, err := opcservice.NewService(endpoint)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer service.Close()
+	m.service = service
+	return m
+}
 
-	p := tea.NewProgram(initialModel(service), tea.WithAltScreen())
+func main() {
+	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
 	}
