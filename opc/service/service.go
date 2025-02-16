@@ -54,6 +54,25 @@ func (s *Service) GetChildren(nodeID *ua.NodeID) ([]opcutil.NodeDef, error) {
 	return nodeDefs, nil
 }
 
+func (s *Service) GetChildrenRecursive(rootNodeID *ua.NodeID) ([]opcutil.NodeDef, error) {
+	rootNode := s.client.Node(rootNodeID)
+
+	nodes, err := opcutil.GetChildrenRecursive(s.ctx, rootNode)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeDefs := make([]opcutil.NodeDef, 0, len(nodes))
+	for _, n := range nodes {
+		def, err := opcutil.Browse(s.ctx, n)
+		if err != nil {
+			return nil,err
+		}
+		nodeDefs = append(nodeDefs, def)
+	}
+	return nodeDefs, nil
+}
+
 func (s *Service) ReadNodeValue(nodeID *ua.NodeID) (string, error) {
 	nodesToRead := []*ua.ReadValueID{
 		{NodeID: nodeID},

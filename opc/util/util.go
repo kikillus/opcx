@@ -43,6 +43,37 @@ func getChildren(ctx context.Context, n *opcua.Node) ([]*opcua.Node, error) {
 	return nodes, nil
 }
 
+func getChildrenRecursive(ctx context.Context, rootNode *opcua.Node) ([]*opcua.Node, error){
+	var collectedNodes []*opcua.Node
+	// creating recursive func with collectedNotes in closure (??)
+	var recursiveFunc func(ctx context.Context, n *opcua.Node) error
+	recursiveFunc = func(ctx context.Context, n *opcua.Node) error {
+
+		// collect chidren
+		children, err := getChildren(ctx, n)
+
+		// add current node to slice if it is a leaf
+		if len(children) == 0 {
+			collectedNodes = append(collectedNodes, n)
+		}
+		if err != nil {
+			return err
+		}
+		// run recurice function for children
+		for _, child := range children {
+			if err := recursiveFunc(ctx, child); err != nil{
+				return err
+			}
+		}
+		// base case no children
+		return nil
+	}
+	if err := recursiveFunc(ctx, rootNode); err != nil {
+		return nil, err
+	}
+	return collectedNodes, nil
+	}
+
 func getNodeAttributes(ctx context.Context, n *opcua.Node) (NodeDef, error) {
 	attrs, err := n.Attributes(ctx, ua.AttributeIDNodeClass, ua.AttributeIDBrowseName, ua.AttributeIDDescription, ua.AttributeIDAccessLevel, ua.AttributeIDDataType)
 	if err != nil {
@@ -143,4 +174,8 @@ func Browse(ctx context.Context, n *opcua.Node) (NodeDef, error) {
 
 func GetChildren(ctx context.Context, n *opcua.Node) ([]*opcua.Node, error) {
 	return getChildren(ctx, n)
+}
+
+func GetChildrenRecursive(ctx context.Context, rootNode *opcua.Node) ([]*opcua.Node, error){
+	return getChildrenRecursive(ctx, rootNode)
 }

@@ -21,6 +21,7 @@ type model struct {
 	height int
 	connectionTextInput textinput.Model
 	err error
+	isLoading bool
 }
 
 type (
@@ -42,15 +43,6 @@ func (m model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m model) fetchChildren(nodeID *ua.NodeID) tea.Cmd {
-	return func() tea.Msg {
-		children, err := m.service.GetChildren(nodeID)
-		if err != nil {
-			log.Fatalf("browse error: %s", err)
-		}
-		return children
-	}
-}
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type){
@@ -69,12 +61,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		newModel, cmd = m.updateDetailView(msg)
 	case ui.ViewStateBrowse:
 		newModel, cmd = m.updateBrowseView(msg)
+	case ui.ViewStateRecursive:
+		newModel, cmd = m.updateRecursiveView(msg)
 	default:
 		newModel = m
 		cmd = nil
 	}
 	return newModel, cmd
 }
+
 func (m model) updateBrowseView(msg tea.Msg) (tea.Model, tea.Cmd){
 	if m.nav.Cursor < 0 {
 		m.nav.Cursor = 0
@@ -120,7 +115,14 @@ func (m model) updateBrowseView(msg tea.Msg) (tea.Model, tea.Cmd){
 				newModel.state = ui.ViewStateDetail
 				newModel.active_node = m.nav.CurrentNodes[m.nav.Cursor]
 				return newModel, nil
-
+		case "c":
+			newModel := m
+			currentNode := m.nav.CurrentNodes[m.nav.Cursor]
+			newModel.active_node = currentNode
+			newModel.nav.Forward(m.nav.CurrentNodes[m.nav.Cursor])
+			newModel.state = ui.ViewStateRecursive
+			recursiveChildren := m.fetchChildrenRecursive(currentNode.NodeID)
+			return newModel, recursiveChildren
 		}
 	case []opcutil.NodeDef:
 		newModel := m
@@ -134,6 +136,37 @@ func (m model) updateBrowseView(msg tea.Msg) (tea.Model, tea.Cmd){
 	case errMsg:
 		m.err = msg
 		return m, nil
+	}
+	return m, nil
+}
+
+func (m model) updateRecursiveView(msg tea.Msg) (tea.Model, tea.Cmd){
+	switch msg := msg.(type){
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC:
+			return m, tea.Quit
+		}
+		switch msg.String(){
+		case "q":
+			return m, tea.Quit
+		case "c":
+			newModel :=m
+			newModel.nav.Backward()
+			newCurrentNode := m.nav.CurrentNode()
+			children := m.fetchChildren(newCurrentNode.NodeID)
+			newModel.state = ui.ViewStateBrowse
+			return newModel, children
+		}
+	case []opcutil.NodeDef:
+		newModel := m
+		if len(msg) == 0 {
+			newModel.nav.Path= m.nav.Path[:len(m.nav.Path)-1]
+			return newModel, nil
+		}
+		newModel.nav.CurrentNodes = msg
+		newModel.nav.Cursor = 0
+		return newModel, nil
 	}
 	return m, nil
 }
@@ -208,5 +241,25 @@ func main() {
 	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func (m model) fetchChildren(nodeID *ua.NodeID) tea.Cmd {
+	return func() tea.Msg {
+		children, err := m.service.GetChildren(nodeID)
+		if err != nil {
+			log.Fatalf("browse error: %s", err)
+		}
+		return children
+	}
+}
+
+func (m model) fetchChildrenRecursive(rootNode *ua.NodeID) tea.Cmd {
+	return func() tea.Msg {
+		children, err := m.service.GetChildrenRecursive(rootNode)
+		if err != nil {
+			log.Fatalf("browse recursive error: %s", err)
+		}
+		return children
 	}
 }

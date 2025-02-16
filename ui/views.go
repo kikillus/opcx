@@ -14,6 +14,7 @@ const (
 	ViewStateBrowse ViewState = iota
 	ViewStateDetail
 	ViewStateConnection
+	ViewStateRecursive
 )
 
 func RenderView(state ViewState, nav *Navigation, activeNode opcutil.NodeDef, readNodeValue func(*ua.NodeID) string, connectionTextInput textinput.Model) string {
@@ -24,9 +25,19 @@ func RenderView(state ViewState, nav *Navigation, activeNode opcutil.NodeDef, re
 		return renderDetailView(activeNode, readNodeValue)
 	case ViewStateConnection:
 		return renderConnectionView(connectionTextInput)
+	case ViewStateRecursive:
+		return renderRecursiveView(nav)
 	default:
 		return "Unkown state"
 	}
+}
+
+func renderRecursiveView(nav *Navigation) string{
+	s := fmt.Sprintf("All leaf children of: %s\n\n", nav.CurrentNode().BrowseName)
+	for _, node := range nav.CurrentNodes{
+		s += fmt.Sprintf("BrowseName: %s - NodeID: %s - DataType: %s\n", node.BrowseName, node.NodeID, node.DataType)
+	}
+	return s
 }
 
 func renderDetailView(node opcutil.NodeDef, readNodeValue func(*ua.NodeID) string) string {
