@@ -4,6 +4,7 @@ import (
 	"fmt"
 	opcutil "opc-tui/opc/util"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/gopcua/opcua/ua"
 )
 
@@ -12,14 +13,17 @@ type ViewState int
 const (
 	ViewStateBrowse ViewState = iota
 	ViewStateDetail
+	ViewStateConnection
 )
 
-func RenderView(state ViewState, nav *Navigation, activeNode opcutil.NodeDef, readNodeValue func(*ua.NodeID) string) string {
+func RenderView(state ViewState, nav *Navigation, activeNode opcutil.NodeDef, readNodeValue func(*ua.NodeID) string, connectionTextInput textinput.Model) string {
 	switch state {
 	case ViewStateBrowse:
 		return renderBrowseView(nav)
 	case ViewStateDetail:
 		return renderDetailView(activeNode, readNodeValue)
+	case ViewStateConnection:
+		return renderConnectionView(connectionTextInput)
 	default:
 		return "Unkown state"
 	}
@@ -83,4 +87,10 @@ func buildPath(path []opcutil.NodeDef) string {
 
 	}
 	return path_as_string
+}
+
+func renderConnectionView(connectionTextInput textinput.Model) string {
+	s := "Connect to OPC Server\n"
+	s += connectionTextInput.View()
+	return s
 }
