@@ -12,23 +12,17 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
-type viewState int
-
-const (
-	viewStateBrowse viewState = iota
-	viewStateDetail
-)
 type model struct {
 	nav *ui.Navigation
 	service *opcservice.Service
 	active_node opcutil.NodeDef
-	state 	viewState
+	state 	ui.ViewState
 	width int
 	height int
 }
 
 func initialModel(service *opcservice.Service) model {
-	return model{nav: ui.NewNavigation(),service: service, state: viewStateBrowse}
+	return model{nav: ui.NewNavigation(),service: service, state: ui.ViewStateBrowse}
 }
 
 func (m model) Init() tea.Cmd {
@@ -82,14 +76,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case "v":
-			if m.state == viewStateDetail {
+			if m.state == ui.ViewStateBrowse {
 				newModel := m
-				newModel.state = viewStateBrowse
+				newModel.state = ui.ViewStateDetail
+				newModel.active_node = m.nav.CurrentNodes[m.nav.Cursor]
 				return newModel, nil
 			}
 			newModel := m
-			newModel.active_node = m.nav.CurrentNodes[m.nav.Cursor]
-			newModel.state = viewStateDetail
+			newModel.state = ui.ViewStateBrowse
 			return newModel, nil
 		}
 	case tea.WindowSizeMsg:
@@ -112,66 +106,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	switch m.state {
-	case viewStateBrowse:
-		return m.viewBrowse()
-	case viewStateDetail:
-		return m.viewDetail()
-	default:
-		return "Unkown state"
-	}
-}
-func (m model) viewDetail() string {
-	s := "OPC UA Node Detail\n\n"
-	s += fmt.Sprintf("BrowseName: %s\n", m.active_node.BrowseName)
-	s += fmt.Sprintf("NodeID: %s\n", m.active_node.NodeID)
-	s += fmt.Sprintf("Description: %s\n", m.active_node.Description)
-	s += fmt.Sprintf("AccessLevel: %s\n", m.active_node.AccessLevel)
-	s += fmt.Sprintf("Path: %s\n", m.active_node.Path)
-	s += fmt.Sprintf("DataType: %s\n", m.active_node.DataType)
-	s += fmt.Sprintf("Writable: %t\n", m.active_node.Writable)
-	s += fmt.Sprintf("Unit: %s\n", m.active_node.Unit)
-	s += fmt.Sprintf("Scale: %s\n", m.active_node.Scale)
-	s += fmt.Sprintf("Min: %s\n", m.active_node.Min)
-	s += fmt.Sprintf("Max: %s\n", m.active_node.Max)
-	value:= m.readNodeValue(m.active_node.NodeID)
-	if !(value == "default") {
-		s += fmt.Sprintf("Value: %s\n", value)
-	}
-	s += "\n[q]uit - toggle [v]iew\n"
-	return s
-}
-func (m model) viewBrowse() string {
-	s := "OPC UA Node Browser\n\n"
-	for i, node := range m.nav.CurrentNodes{
-		cursor := " "
-		if m.nav.Cursor == i {
-			cursor = ">"
-		}
-		if node.DataType == "" {
-		s += fmt.Sprintf("%s %s\n", cursor, node.BrowseName)} else {
-		s += fmt.Sprintf("%s %s (%s)\n", cursor, node.BrowseName, node.DataType)
-		}
-	}
-	path := ""
-	for _, parent := range m.nav.Path {
-		if parent.BrowseName == "" {
-			continue
-		}
-		if path == "" {
-			path += parent.BrowseName
-		} else {
-			path += " > " + parent.BrowseName
-		}
-	}
-	if !(path == "") {
-	s += "\n" + fmt.Sprintf("Path: %s", path)
-	}
-	s += "\n[q]uit - toggle [v]iew\n"
-	return s
-}
+	return ui.RenderView(m.state, m.nav, m.active_node, m.readNodeValue)}
 
 func (m model) readNodeValue(nodeID *ua.NodeID) (string) {
+	fmt.Println("got here")
 	value, err := m.service.ReadNodeValue(nodeID)
 	if err != nil {
 		log.Fatalf("read error: %s", err)
