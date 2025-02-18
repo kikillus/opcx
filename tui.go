@@ -101,12 +101,9 @@ func (m model) updateBrowseView(msg tea.Msg) (tea.Model, tea.Cmd){
 			if m.nav.Cursor > 0 {
 				newModel := m
 				newModel.nav.Cursor--
-				
-				 // Adjust viewport if cursor is above visible area
 				if newModel.nav.Cursor < newModel.viewport.YOffset {
 					newModel.viewport.SetYOffset(newModel.nav.Cursor)
 				}
-				
 				return newModel, nil
 			}
 			return m, nil
@@ -114,12 +111,10 @@ func (m model) updateBrowseView(msg tea.Msg) (tea.Model, tea.Cmd){
 			if m.nav.Cursor < len(m.nav.CurrentNodes)-1 {
 				newModel := m
 				newModel.nav.Cursor++
-				
 				 // Adjust viewport if cursor is beyond visible area
 				if newModel.nav.Cursor >= newModel.viewport.YOffset+newModel.viewport.Height {
 					newModel.viewport.SetYOffset(newModel.nav.Cursor - newModel.viewport.Height + 1)
 				}
-				
 				return newModel, nil
 			}
 			return m, nil
@@ -172,35 +167,63 @@ func (m model) updateBrowseView(msg tea.Msg) (tea.Model, tea.Cmd){
 	return m, cmd
 }
 
-func (m model) updateRecursiveView(msg tea.Msg) (tea.Model, tea.Cmd){
-	switch msg := msg.(type){
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC:
-			return m, tea.Quit
-		}
-		switch msg.String(){
-		case "q":
-			return m, tea.Quit
-		case "c":
-			newModel :=m
-			newModel.nav.Backward()
-			newCurrentNode := m.nav.CurrentNode()
-			children := m.fetchChildren(newCurrentNode.NodeID)
-			newModel.state = ui.ViewStateBrowse
-			return newModel, children
-		}
-	case []opcutil.NodeDef:
-		newModel := m
-		if len(msg) == 0 {
-			newModel.nav.Path= m.nav.Path[:len(m.nav.Path)-1]
-			return newModel, nil
-		}
-		newModel.nav.CurrentNodes = msg
-		newModel.nav.Cursor = 0
-		return newModel, nil
-	}
-	return m, nil
+func (m model) updateRecursiveView(msg tea.Msg) (tea.Model, tea.Cmd) {
+    if m.nav.Cursor < 0 {
+        m.nav.Cursor = 0
+    } else if m.nav.Cursor >= len(m.nav.CurrentNodes) {
+        m.nav.Cursor = len(m.nav.CurrentNodes) - 1
+    }
+    switch msg := msg.(type) {
+    case tea.KeyMsg:
+        switch msg.Type {
+        case tea.KeyCtrlC:
+            return m, tea.Quit
+        }
+        switch msg.String() {
+        case "q":
+            return m, tea.Quit
+        case "up", "k":
+            if m.nav.Cursor > 0 {
+                newModel := m
+                newModel.nav.Cursor--
+                if newModel.nav.Cursor < newModel.viewport.YOffset {
+                    newModel.viewport.SetYOffset(newModel.nav.Cursor)
+                }
+                return newModel, nil
+            }
+            return m, nil
+        case "down", "j":
+            if m.nav.Cursor < len(m.nav.CurrentNodes)-1 {
+                newModel := m
+                newModel.nav.Cursor++
+                // Adjust viewport if cursor is beyond visible area
+                if newModel.nav.Cursor >= newModel.viewport.YOffset+newModel.viewport.Height {
+                    newModel.viewport.SetYOffset(newModel.nav.Cursor - newModel.viewport.Height + 1)
+                }
+                return newModel, nil
+            }
+            return m, nil
+        case "c":
+            newModel := m
+            newModel.nav.Backward()
+            newCurrentNode := m.nav.CurrentNode()
+            children := m.fetchChildren(newCurrentNode.NodeID)
+            newModel.state = ui.ViewStateBrowse
+            return newModel, children
+        }
+    case []opcutil.NodeDef:
+        newModel := m
+        if len(msg) == 0 {
+            newModel.nav.Path = m.nav.Path[:len(m.nav.Path)-1]
+            newModel.viewport.SetYOffset(0) // Reset viewport position
+            return newModel, nil
+        }
+        newModel.nav.CurrentNodes = msg
+        newModel.nav.Cursor = 0
+        newModel.viewport.SetYOffset(0) // Reset viewport position when loading new nodes
+        return newModel, nil
+    }
+    return m, nil
 }
 
 func (m model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd){
@@ -254,7 +277,7 @@ func (m model) View() string {
 
 	var rendered string
 	switch m.state {
-	case ui.ViewStateBrowse:
+	case ui.ViewStateBrowse, ui.ViewStateRecursive:
 		m.viewport.SetContent(content)
 		rendered = fmt.Sprintf("%s\n%s\n%s", header, m.viewport.View(), footer)
 	default:

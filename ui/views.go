@@ -22,27 +22,32 @@ func RenderView(state ViewState, nav *Navigation, activeNode opcutil.NodeDef, re
 	case ViewStateBrowse:
 		return renderBrowseView(nav)
 	case ViewStateDetail:
-		return renderDetailView(activeNode, readNodeValue), "", ""
+		return renderDetailView(activeNode, readNodeValue)
 	case ViewStateConnection:
 		return renderConnectionView(connectionTextInput)
 	case ViewStateRecursive:
-		return renderRecursiveView(nav), "", ""
+		return renderRecursiveView(nav)
 	default:
 		return "Unkown state", "", ""
 	}
 }
 
-func renderRecursiveView(nav *Navigation) string{
-	s := fmt.Sprintf("All leaf children of: %s\n\n", nav.CurrentNode().BrowseName)
-	for _, node := range nav.CurrentNodes{
-		s += fmt.Sprintf("BrowseName: %s - NodeID: %s - DataType: %s\n", node.BrowseName, node.NodeID, node.DataType)
+func renderRecursiveView(nav *Navigation) (string, string, string){
+	header := fmt.Sprintf("All leaf children of: %s\n\n", nav.CurrentNode().BrowseName)
+	s := ""
+	for i, node := range nav.CurrentNodes{
+		cursor := " "
+		if nav.Cursor == i {
+			cursor = ">"}
+		s += fmt.Sprintf("%s BrowseName: %s - NodeID: %s - DataType: %s\n", cursor,node.BrowseName, node.NodeID, node.DataType)
 	}
-	return s
+	footer := "\n[q]uit - toggle [c]hildren"
+	return s, header, footer
 }
 
-func renderDetailView(node opcutil.NodeDef, readNodeValue func(*ua.NodeID) string) string {
-	s := "OPC UA Node Detail\n\n"
-	s += fmt.Sprintf("BrowseName: %s\n", node.BrowseName)
+func renderDetailView(node opcutil.NodeDef, readNodeValue func(*ua.NodeID) string) (string, string, string){
+	header := "OPC UA Node Detail\n\n"
+	s := fmt.Sprintf("BrowseName: %s\n", node.BrowseName)
 	s += fmt.Sprintf("NodeID: %s\n", node.NodeID)
 	s += fmt.Sprintf("Description: %s\n", node.Description)
 	s += fmt.Sprintf("AccessLevel: %s\n", node.AccessLevel)
@@ -57,8 +62,8 @@ func renderDetailView(node opcutil.NodeDef, readNodeValue func(*ua.NodeID) strin
 	if !(value == "default") {
 		s += fmt.Sprintf("Value: %s\n", value)
 	}
-	s += "\n[q]uit - toggle [v]iew\n"
-	return s
+	footer := "\n[q]uit - toggle [v]iew"
+	return s, header, footer
 }
 
 func renderBrowseView(nav *Navigation) (string,string, string){
@@ -82,7 +87,7 @@ func renderBrowseView(nav *Navigation) (string,string, string){
 	if path != "" {
 		footer += "\n" + fmt.Sprintf("Path: %s", path)
 	}
-	footer += "\n[q]uit - toggle [v]iew"
+	footer += "\n[q]uit - toggle [v]iew - toogle leaf [c]hildren"
 	return content, header, footer
 }
 
