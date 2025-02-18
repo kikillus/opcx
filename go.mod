@@ -1,4 +1,4 @@
-module opc-tui
+module opcx
 
 go 1.24.0
 

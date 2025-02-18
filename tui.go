@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	opcservice "opc-tui/opc/service"
-	opcutil "opc-tui/opc/util"
-	"opc-tui/ui"
+	opcservice "opcx/opc/service"
+	opcutil "opcx/opc/util"
+	"opcx/ui"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -23,7 +23,7 @@ type model struct {
 	height int
 	connectionTextInput textinput.Model
 	err error
-	viewport *viewport.Model  // Change to pointer
+	viewport *viewport.Model
 }
 
 type (
@@ -38,7 +38,7 @@ func initialModel() model {
 	connectionText.Width = 50
 	connectionText.Focus()
 	vp := viewport.New(0,0)
-	vp.YPosition = 3 // Add this to position viewport below header
+	vp.YPosition = 3
 	return model{nav: ui.NewNavigation(), viewport: &vp, connectionTextInput: connectionText, state: ui.ViewStateConnection}
 }
 

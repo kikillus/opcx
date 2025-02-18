@@ -2,7 +2,7 @@ package opcservice
 
 import (
 	"context"
-	opcutil "opc-tui/opc/util"
+	opcutil "opcx/opc/util"
 	"strconv"
 	"time"
 

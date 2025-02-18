@@ -1,7 +1,7 @@
 package ui
 
 import (
-	opcutil "opc-tui/opc/util"
+	opcutil "opcx/opc/util"
 
 	"github.com/gopcua/opcua/ua"
 )
