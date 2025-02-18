@@ -17,18 +17,18 @@ const (
 	ViewStateRecursive
 )
 
-func RenderView(state ViewState, nav *Navigation, activeNode opcutil.NodeDef, readNodeValue func(*ua.NodeID) string, connectionTextInput textinput.Model) string {
+func RenderView(state ViewState, nav *Navigation, activeNode opcutil.NodeDef, readNodeValue func(*ua.NodeID) string, connectionTextInput textinput.Model) (string, string,  string){
 	switch state {
 	case ViewStateBrowse:
 		return renderBrowseView(nav)
 	case ViewStateDetail:
-		return renderDetailView(activeNode, readNodeValue)
+		return renderDetailView(activeNode, readNodeValue), "", ""
 	case ViewStateConnection:
 		return renderConnectionView(connectionTextInput)
 	case ViewStateRecursive:
-		return renderRecursiveView(nav)
+		return renderRecursiveView(nav), "", ""
 	default:
-		return "Unkown state"
+		return "Unkown state", "", ""
 	}
 }
 
@@ -61,9 +61,10 @@ func renderDetailView(node opcutil.NodeDef, readNodeValue func(*ua.NodeID) strin
 	return s
 }
 
-func renderBrowseView(nav *Navigation) string {
-	s := "OPC UA Node Browser\n\n"
+func renderBrowseView(nav *Navigation) (string,string, string){
+	header := "OPC UA Node Browser"
 
+	content := ""
 	for i, node := range nav.CurrentNodes {
 		cursor := " "
 		if nav.Cursor == i {
@@ -71,17 +72,18 @@ func renderBrowseView(nav *Navigation) string {
 		}
 
 		if node.DataType == "" {
-			s += fmt.Sprintf("%s %s\n", cursor, node.BrowseName)
+		content += fmt.Sprintf("%s %s\n", cursor, node.BrowseName)
 		} else {
-			s += fmt.Sprintf("%s %s (%s)\n", cursor, node.BrowseName, node.DataType)
+			content += fmt.Sprintf("%s %s (%s)\n", cursor, node.BrowseName, node.DataType)
 		}
 	}
+	footer := ""
 	path := buildPath(nav.Path)
 	if path != "" {
-		s += "\n" + fmt.Sprintf("Path: %s", path)
+		footer += "\n" + fmt.Sprintf("Path: %s", path)
 	}
-	s += "\n[q]uit - toggle [v]iew\n"
-	return s
+	footer += "\n[q]uit - toggle [v]iew"
+	return content, header, footer
 }
 
 func buildPath(path []opcutil.NodeDef) string {
@@ -100,8 +102,8 @@ func buildPath(path []opcutil.NodeDef) string {
 	return path_as_string
 }
 
-func renderConnectionView(connectionTextInput textinput.Model) string {
+func renderConnectionView(connectionTextInput textinput.Model) (string, string, string) {
 	s := "Connect to OPC Server\n"
 	s += connectionTextInput.View()
-	return s
+	return s, "", ""
 }

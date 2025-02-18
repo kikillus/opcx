@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	opcservice "opc-tui/opc/service"
@@ -8,6 +9,7 @@ import (
 	"opc-tui/ui"
 
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/gopcua/opcua/ua"
 )
@@ -21,7 +23,7 @@ type model struct {
 	height int
 	connectionTextInput textinput.Model
 	err error
-	isLoading bool
+	viewport *viewport.Model  // Change to pointer
 }
 
 type (
@@ -35,7 +37,9 @@ func initialModel() model {
 	connectionText.CharLimit = 128
 	connectionText.Width = 50
 	connectionText.Focus()
-	return model{nav: ui.NewNavigation(), connectionTextInput: connectionText, state: ui.ViewStateConnection}
+	vp := viewport.New(0,0)
+	vp.YPosition = 3 // Add this to position viewport below header
+	return model{nav: ui.NewNavigation(), viewport: &vp, connectionTextInput: connectionText, state: ui.ViewStateConnection}
 }
 
 
@@ -50,6 +54,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		newModel := m
 		newModel.width = msg.Width
 		newModel.height = msg.Height
+
+		headerHeight := 6
+		footerHeight := 0
+		verticalMarginHeight := headerHeight + footerHeight
+
+		newModel.viewport.Width = msg.Width
+		newModel.viewport.Height = msg.Height - verticalMarginHeight
 		return newModel,nil
 	}
 	var newModel tea.Model
@@ -76,6 +87,7 @@ func (m model) updateBrowseView(msg tea.Msg) (tea.Model, tea.Cmd){
 	} else if m.nav.Cursor >= len(m.nav.CurrentNodes) {
 		m.nav.Cursor = len(m.nav.CurrentNodes) - 1
 	}
+	var cmd tea.Cmd
 	switch msg := msg.(type){
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -87,12 +99,30 @@ func (m model) updateBrowseView(msg tea.Msg) (tea.Model, tea.Cmd){
 			return m, tea.Quit
 		case "up", "k":
 			if m.nav.Cursor > 0 {
-				m.nav.Cursor--
+				newModel := m
+				newModel.nav.Cursor--
+				
+				 // Adjust viewport if cursor is above visible area
+				if newModel.nav.Cursor < newModel.viewport.YOffset {
+					newModel.viewport.SetYOffset(newModel.nav.Cursor)
+				}
+				
+				return newModel, nil
 			}
+			return m, nil
 		case "down", "j":
 			if m.nav.Cursor < len(m.nav.CurrentNodes)-1 {
-				m.nav.Cursor++
+				newModel := m
+				newModel.nav.Cursor++
+				
+				 // Adjust viewport if cursor is beyond visible area
+				if newModel.nav.Cursor >= newModel.viewport.YOffset+newModel.viewport.Height {
+					newModel.viewport.SetYOffset(newModel.nav.Cursor - newModel.viewport.Height + 1)
+				}
+				
+				return newModel, nil
 			}
+			return m, nil
 		case "enter", "right", "l":
 			if len(m.nav.CurrentNodes) == 0 {
 				return m, nil
@@ -128,16 +158,18 @@ func (m model) updateBrowseView(msg tea.Msg) (tea.Model, tea.Cmd){
 		newModel := m
 		if len(msg) == 0 {
 			newModel.nav.Path= m.nav.Path[:len(m.nav.Path)-1]
+			newModel.viewport.SetYOffset(0) // Reset viewport position
 			return newModel, nil
 		}
 		newModel.nav.CurrentNodes = msg
 		newModel.nav.Cursor = 0
+		newModel.viewport.SetYOffset(0) // Reset viewport position when loading new nodes
 		return newModel, nil
 	case errMsg:
 		m.err = msg
 		return m, nil
 	}
-	return m, nil
+	return m, cmd
 }
 
 func (m model) updateRecursiveView(msg tea.Msg) (tea.Model, tea.Cmd){
@@ -218,7 +250,18 @@ func (m model) updateConnectionView(msg tea.Msg) (tea.Model, tea.Cmd){
 }
 
 func (m model) View() string {
-	return ui.RenderView(m.state, m.nav, m.active_node, m.readNodeValue, m.connectionTextInput)}
+	content, header, footer := ui.RenderView(m.state, m.nav, m.active_node, m.readNodeValue, m.connectionTextInput)
+
+	var rendered string
+	switch m.state {
+	case ui.ViewStateBrowse:
+		m.viewport.SetContent(content)
+		rendered = fmt.Sprintf("%s\n%s\n%s", header, m.viewport.View(), footer)
+	default:
+		rendered = fmt.Sprintf("%s\n%s\n%s\n", header, content, footer)
+	}
+		return rendered
+	}
 
 func (m model) readNodeValue(nodeID *ua.NodeID) (string) {
 	value, err := m.service.ReadNodeValue(nodeID)
