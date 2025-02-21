@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style license that can be
 // found in the LICENSE file.
 
-package opcutil
+package opc
 
 import (
 	"context"
@@ -33,7 +33,7 @@ func (n NodeDef) Records() []string {
 	return []string{n.BrowseName, n.DataType, n.NodeID.String(), n.Unit, n.Scale, n.Min, n.Max, strconv.FormatBool(n.Writable), n.Description}
 }
 
-func getChildren(ctx context.Context, n *opcua.Node) ([]*opcua.Node, error) {
+func getChildrenNodes(ctx context.Context, n *opcua.Node) ([]*opcua.Node, error) {
 	refs, err := n.ReferencedNodes(ctx, 33, ua.BrowseDirectionForward, ua.NodeClassAll, true)
 	if err != nil {
 		return nil, errors.Errorf("References: %s", err)
@@ -43,14 +43,14 @@ func getChildren(ctx context.Context, n *opcua.Node) ([]*opcua.Node, error) {
 	return nodes, nil
 }
 
-func getChildrenRecursive(ctx context.Context, rootNode *opcua.Node) ([]*opcua.Node, error){
+func getChildrenNodesRecursive(ctx context.Context, rootNode *opcua.Node) ([]*opcua.Node, error) {
 	var collectedNodes []*opcua.Node
 	// creating recursive func with collectedNotes in closure (??)
 	var recursiveFunc func(ctx context.Context, n *opcua.Node) error
 	recursiveFunc = func(ctx context.Context, n *opcua.Node) error {
 
 		// collect chidren
-		children, err := getChildren(ctx, n)
+		children, err := getChildrenNodes(ctx, n)
 
 		// add current node to slice if it is a leaf
 		if len(children) == 0 {
@@ -61,7 +61,7 @@ func getChildrenRecursive(ctx context.Context, rootNode *opcua.Node) ([]*opcua.N
 		}
 		// run recurice function for children
 		for _, child := range children {
-			if err := recursiveFunc(ctx, child); err != nil{
+			if err := recursiveFunc(ctx, child); err != nil {
 				return err
 			}
 		}
@@ -72,7 +72,7 @@ func getChildrenRecursive(ctx context.Context, rootNode *opcua.Node) ([]*opcua.N
 		return nil, err
 	}
 	return collectedNodes, nil
-	}
+}
 
 func getNodeAttributes(ctx context.Context, n *opcua.Node) (NodeDef, error) {
 	attrs, err := n.Attributes(ctx, ua.AttributeIDNodeClass, ua.AttributeIDBrowseName, ua.AttributeIDDescription, ua.AttributeIDAccessLevel, ua.AttributeIDDataType)
@@ -156,7 +156,7 @@ func getNodeAttributes(ctx context.Context, n *opcua.Node) (NodeDef, error) {
 	return def, nil
 }
 
-func ReadValue(ctx context.Context, client *opcua.Client, nodesToRead []*ua.ReadValueID) (interface{}, error) {
+func readValue(ctx context.Context, client *opcua.Client, nodesToRead []*ua.ReadValueID) (interface{}, error) {
 	req := &ua.ReadRequest{
 		NodesToRead: nodesToRead,
 	}
@@ -168,14 +168,6 @@ func ReadValue(ctx context.Context, client *opcua.Client, nodesToRead []*ua.Read
 }
 
 // Exported Browse function to be used in the TUI application
-func Browse(ctx context.Context, n *opcua.Node) (NodeDef, error) {
+func browse(ctx context.Context, n *opcua.Node) (NodeDef, error) {
 	return getNodeAttributes(ctx, n)
-}
-
-func GetChildren(ctx context.Context, n *opcua.Node) ([]*opcua.Node, error) {
-	return getChildren(ctx, n)
-}
-
-func GetChildrenRecursive(ctx context.Context, rootNode *opcua.Node) ([]*opcua.Node, error){
-	return getChildrenRecursive(ctx, rootNode)
 }

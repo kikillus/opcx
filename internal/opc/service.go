@@ -1,8 +1,7 @@
-package opcservice
+package opc
 
 import (
 	"context"
-	opcutil "opcx/opc/util"
 	"strconv"
 	"time"
 
@@ -35,17 +34,17 @@ func (s *Service) Close() error {
 	return s.client.Close(s.ctx)
 }
 
-func (s *Service) GetChildren(nodeID *ua.NodeID) ([]opcutil.NodeDef, error) {
+func (s *Service) GetChildren(nodeID *ua.NodeID) ([]NodeDef, error) {
 	node := s.client.Node(nodeID)
 
-	nodes, err := opcutil.GetChildren(s.ctx, node)
+	nodes, err := getChildrenNodes(s.ctx, node)
 	if err != nil {
 		return nil, err
 	}
 
-	nodeDefs := make([]opcutil.NodeDef, 0, len(nodes))
+	nodeDefs := make([]NodeDef, 0, len(nodes))
 	for _, n := range nodes {
-		def, err := opcutil.Browse(s.ctx, n)
+		def, err := browse(s.ctx, n)
 		if err != nil {
 			return nil, err
 		}
@@ -54,19 +53,19 @@ func (s *Service) GetChildren(nodeID *ua.NodeID) ([]opcutil.NodeDef, error) {
 	return nodeDefs, nil
 }
 
-func (s *Service) GetChildrenRecursive(rootNodeID *ua.NodeID) ([]opcutil.NodeDef, error) {
+func (s *Service) GetChildrenRecursive(rootNodeID *ua.NodeID) ([]NodeDef, error) {
 	rootNode := s.client.Node(rootNodeID)
 
-	nodes, err := opcutil.GetChildrenRecursive(s.ctx, rootNode)
+	nodes, err := getChildrenNodesRecursive(s.ctx, rootNode)
 	if err != nil {
 		return nil, err
 	}
 
-	nodeDefs := make([]opcutil.NodeDef, 0, len(nodes))
+	nodeDefs := make([]NodeDef, 0, len(nodes))
 	for _, n := range nodes {
-		def, err := opcutil.Browse(s.ctx, n)
+		def, err := browse(s.ctx, n)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
 		nodeDefs = append(nodeDefs, def)
 	}
@@ -77,7 +76,7 @@ func (s *Service) ReadNodeValue(nodeID *ua.NodeID) (string, error) {
 	nodesToRead := []*ua.ReadValueID{
 		{NodeID: nodeID},
 	}
-	value, err := opcutil.ReadValue(s.ctx, s.client, nodesToRead)
+	value, err := readValue(s.ctx, s.client, nodesToRead)
 	if err != nil {
 		return "", err
 	}

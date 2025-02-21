@@ -1,26 +1,26 @@
 package ui
 
 import (
-	opcutil "opcx/opc/util"
+	"opcx/internal/opc"
 
 	"github.com/gopcua/opcua/ua"
 )
 
 type Navigation struct {
-	Path         []opcutil.NodeDef
-	CurrentNodes []opcutil.NodeDef
+	Path         []opc.NodeDef
+	CurrentNodes []opc.NodeDef
 	Cursor       int
 }
 
 func NewNavigation() *Navigation {
-	rootNode := opcutil.NodeDef{
+	rootNode := opc.NodeDef{
 		NodeID: ua.NewNumericNodeID(0, 84),
 	}
 
-	return &Navigation{Path: []opcutil.NodeDef{rootNode}}
+	return &Navigation{Path: []opc.NodeDef{rootNode}}
 }
 
-func (n *Navigation) Forward(node opcutil.NodeDef) {
+func (n *Navigation) Forward(node opc.NodeDef) {
 	n.Path = append(n.Path, node)
 }
 
@@ -32,7 +32,7 @@ func (n *Navigation) Backward() bool {
 	return true
 }
 
-func (n *Navigation) CurrentNode() *opcutil.NodeDef {
+func (n *Navigation) CurrentNode() *opc.NodeDef {
 	if len(n.Path) == 0 {
 		return nil
 	}

@@ -2,7 +2,7 @@ package ui
 
 import (
 	"fmt"
-	opcutil "opcx/opc/util"
+	"opcx/internal/opc"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/lipgloss"
@@ -18,7 +18,7 @@ const (
 	ViewStateRecursive
 )
 
-func RenderView(state ViewState, nav *Navigation, activeNode opcutil.NodeDef, readNodeValue func(*ua.NodeID) string, connectionTextInput textinput.Model) (string, string,  string){
+func RenderView(state ViewState, nav *Navigation, activeNode opc.NodeDef, readNodeValue func(*ua.NodeID) (string, error), connectionTextInput textinput.Model) (string, string,  string){
 	switch state {
 	case ViewStateBrowse:
 		return renderBrowseView(nav)
@@ -46,7 +46,7 @@ func renderRecursiveView(nav *Navigation) (string, string, string){
 	return s, header, footer
 }
 
-func renderDetailView(node opcutil.NodeDef, readNodeValue func(*ua.NodeID) string) (string, string, string){
+func renderDetailView(node opc.NodeDef, readNodeValue func(*ua.NodeID) (string, error)) (string, string, string){
 	header := HeaderStyle.Render("OPC UA Node Detail")
     labelStyle := lipgloss.NewStyle().Foreground(subtle)
     s := fmt.Sprintf("%s %s\n",
@@ -82,8 +82,11 @@ func renderDetailView(node opcutil.NodeDef, readNodeValue func(*ua.NodeID) strin
 	s += fmt.Sprintf("%s %s\n",
 		labelStyle.Render("Max:"),
 		node.Max)
-	value := readNodeValue(node.NodeID)
-	if !(value == "default") {
+	value, err := readNodeValue(node.NodeID)
+	if err != nil {
+		s += fmt.Sprintf("Error reading value: %s\n", err)
+	}
+	if !(value == "default") && value != "" {
 		s += fmt.Sprintf("Value: %s\n", value)
 	}
 	footer := FooterStyle.Render("[q]uit - toggle [v]iew")
@@ -109,7 +112,7 @@ func renderBrowseView(nav *Navigation) (string, string, string) {
 	return content, header, FooterStyle.Render(footer)
 }
 
-func buildPath(path []opcutil.NodeDef) string {
+func buildPath(path []opc.NodeDef) string {
 	path_as_string := ""
 	for _, parent := range path {
 		if parent.BrowseName == "" {
