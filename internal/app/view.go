@@ -15,10 +15,12 @@ func (m model) View() string {
 		nav = m.browseView.nav
 	case ui.ViewStateRecursive:
 		nav = m.recursiveView.nav
+	case ui.ViewStateMonitor:
+		nav = m.monitorView.nav
 	case ui.ViewStateConnection:
 		connectionTextInput = m.connectionView.connectionTextInput
 	}
-	content, header, footer := ui.RenderView(m.state, nav, m.detailsView.activeNode, m.client.ReadNodeValue, connectionTextInput)
+	content, header, footer := ui.RenderView(m.state, nav, m.detailsView.activeNode, m.client.ReadNodeValue, connectionTextInput, m.monitoredNodes)
 
 	var rendered string
 	switch m.state {

@@ -33,6 +33,20 @@ func (n NodeDef) Records() []string {
 	return []string{n.BrowseName, n.DataType, n.NodeID.String(), n.Unit, n.Scale, n.Min, n.Max, strconv.FormatBool(n.Writable), n.Description}
 }
 
+func (n NodeDef) Equal(other NodeDef) bool {
+	return n.NodeID.String() == other.NodeID.String()
+}
+
+
+func (node NodeDef) IsInSlice(nodes []NodeDef) bool {
+	for _, n := range nodes {
+		if n.NodeID == node.NodeID {
+			return true
+		}
+	}
+	return false
+}
+
 func getChildrenNodes(ctx context.Context, n *opcua.Node) ([]*opcua.Node, error) {
 	refs, err := n.ReferencedNodes(ctx, 33, ua.BrowseDirectionForward, ua.NodeClassAll, true)
 	if err != nil {

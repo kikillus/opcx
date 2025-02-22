@@ -9,6 +9,12 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
+type BrowseViewModel struct {
+	viewport   *viewport.Model
+	activeNode opc.NodeDef
+	nav        *ui.Navigation
+	err        error
+}
 func NewBrowseViewModel() BrowseViewModel {
 	vp := viewport.New(0, 0)
 	vp.YPosition = 3
@@ -27,8 +33,15 @@ type TransitionBrowseToRecursiveMsg struct {
 	rootNode opc.NodeDef
 }
 
+type TransitionBrowseToMonitorMsg struct {
+}
+
 type FetchChildrenMsg struct {
 	NodeID *ua.NodeID
+}
+
+type ToggleMonitorMsg struct {
+	Node opc.NodeDef
 }
 func (m BrowseViewModel) Update(msg tea.Msg) (BrowseViewModel, tea.Cmd) {
 	if m.nav.Cursor < 0 {
@@ -91,6 +104,12 @@ func (m BrowseViewModel) Update(msg tea.Msg) (BrowseViewModel, tea.Cmd) {
 			newModel := m
 			currentNode := m.nav.CurrentNodes[m.nav.Cursor]
 			return newModel, func() tea.Msg { return TransitionBrowseToRecursiveMsg{rootNode: currentNode} }
+		case "m":
+			return m, func() tea.Msg { return TransitionBrowseToMonitorMsg{}}
+		case " ":
+			return m, func() tea.Msg { return ToggleMonitorMsg{Node: m.nav.CurrentNodes[m.nav.Cursor]}
+		}
+
 		}
 	case []opc.NodeDef:
 		newModel := m
@@ -109,3 +128,4 @@ func (m BrowseViewModel) Update(msg tea.Msg) (BrowseViewModel, tea.Cmd) {
 	}
 	return m, cmd
 }
+

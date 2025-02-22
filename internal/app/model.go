@@ -11,7 +11,6 @@ import (
 
 type model struct {
 	client              *opc.Client
-	activeNode          opc.NodeDef
 	state               ui.ViewState
 	width               int
 	height              int
@@ -20,32 +19,9 @@ type model struct {
 	browseView     BrowseViewModel
 	detailsView    DetailsViewModel
 	recursiveView RecursiveViewModel
-}
+	monitorView   MonitorViewModel
 
-type ConnectionViewModel struct {
-
-	connectionTextInput textinput.Model
-	err error
-}
-
-type BrowseViewModel struct {
-	viewport *viewport.Model
-	activeNode opc.NodeDef
-	nav *ui.Navigation
-	err error
-}
-
-type DetailsViewModel struct {
-	viewport *viewport.Model
-	activeNode opc.NodeDef
-	err error
-}
-
-type RecursiveViewModel struct {
-	viewport *viewport.Model
-	activeNode opc.NodeDef
-	nav *ui.Navigation
-	err error
+	monitoredNodes []opc.NodeDef
 }
 
 type (
@@ -61,6 +37,8 @@ func InitialModel() model {
 		browseView: NewBrowseViewModel(),
 		detailsView: NewDetailsViewModel(),
 		recursiveView: NewRecursiveViewModel(),
+		monitorView: NewMonitorViewModel(),
+		monitoredNodes: make([]opc.NodeDef, 0),
 	}
 }
 

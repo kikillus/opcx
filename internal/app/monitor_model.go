@@ -8,26 +8,30 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-
-type RecursiveViewModel struct {
-	viewport   *viewport.Model
-	nav        *ui.Navigation
+type MonitorViewModel struct {
+	viewport       *viewport.Model
+	nav            *ui.Navigation
+	monitoredNodes []opc.NodeDef
 }
 
-func NewRecursiveViewModel() RecursiveViewModel {
+type TransitionMonitorToBrowseMsg struct {
+}
+
+type TransitionMonitorToDetailsMsg struct {
+	node opc.NodeDef
+}
+
+func NewMonitorViewModel() MonitorViewModel {
 	vp := viewport.New(0, 0)
 	vp.YPosition = 3
 
-	return RecursiveViewModel{
-		nav: ui.NewNavigation(),
+	return MonitorViewModel{
 		viewport: &vp,
+		nav:      ui.NewNavigation(),
 	}
 }
 
-type TransitionRecursiveToBrowseMsg struct {
-}
-
-func (m RecursiveViewModel) Update(msg tea.Msg) (RecursiveViewModel, tea.Cmd) {
+func (m MonitorViewModel) Update(msg tea.Msg) (MonitorViewModel, tea.Cmd) {
 	if m.nav.Cursor < 0 {
 		m.nav.Cursor = 0
 	} else if m.nav.Cursor >= len(m.nav.CurrentNodes) {
@@ -63,8 +67,8 @@ func (m RecursiveViewModel) Update(msg tea.Msg) (RecursiveViewModel, tea.Cmd) {
 				return newModel, nil
 			}
 			return m, nil
-		case "c":
-			return m, func () tea.Msg {
+		case "m":
+			return m, func() tea.Msg {
 				return TransitionRecursiveToBrowseMsg{}
 			}
 		}

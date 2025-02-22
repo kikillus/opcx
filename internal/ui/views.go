@@ -16,18 +16,21 @@ const (
 	ViewStateDetail
 	ViewStateConnection
 	ViewStateRecursive
+	ViewStateMonitor
 )
 
-func RenderView(state ViewState, nav *Navigation, activeNode opc.NodeDef, readNodeValue func(*ua.NodeID) (string, error), connectionTextInput textinput.Model) (string, string,  string){
+func RenderView(state ViewState, nav *Navigation, activeNode opc.NodeDef, readNodeValue func(*ua.NodeID) (string, error), connectionTextInput textinput.Model, monitoredNodes []opc.NodeDef) (string, string,  string){
 	switch state {
 	case ViewStateBrowse:
-		return renderBrowseView(nav)
+		return renderBrowseView(nav, monitoredNodes)
 	case ViewStateDetail:
 		return renderDetailView(activeNode, readNodeValue)
 	case ViewStateConnection:
 		return renderConnectionView(connectionTextInput)
 	case ViewStateRecursive:
 		return renderRecursiveView(nav)
+	case ViewStateMonitor:
+		return renderMonitorView(nav, readNodeValue)
 	default:
 		return "Unkown state", "", ""
 	}
@@ -93,14 +96,20 @@ func renderDetailView(node opc.NodeDef, readNodeValue func(*ua.NodeID) (string, 
 	return s, header, footer
 }
 
-func renderBrowseView(nav *Navigation) (string, string, string) {
+func renderBrowseView(nav *Navigation, monitoredNodes []opc.NodeDef) (string, string, string) {
     header := HeaderStyle.Render("OPC UA Node Browser")
     content := ""
     for i, node := range nav.CurrentNodes {
+		var prefix string
+		if node.IsInSlice(monitoredNodes) {
+			prefix = "[m] "
+		} else {
+			prefix = "[ ] "
+		}
         if i == nav.Cursor {
-            content += SelectedStyle.Render("▸ " + node.BrowseName) + "\n"
+            content += SelectedStyle.Render(prefix + "▸ " + node.BrowseName) + "\n"
         } else {
-            content += "  " + node.BrowseName + "\n"
+            content += prefix + "  " + node.BrowseName + "\n"
         }
     }
 	path := buildPath(nav.Path)
@@ -108,7 +117,7 @@ func renderBrowseView(nav *Navigation) (string, string, string) {
 	if path != "" {
 		footer += "\n" + fmt.Sprintf("Path: %s", path)
 	}
-	footer += "\n[q]uit - toggle [v]iew - toogle leaf [c]hildren"
+	footer += "\n[q]uit - toggle [v]iew - toogle leaf [c]hildren - toggle [m]onitor view - [space] add to monitor"
 	return content, header, FooterStyle.Render(footer)
 }
 
@@ -136,4 +145,22 @@ func renderConnectionView(connectionTextInput textinput.Model) (string, string, 
         Render(connectionTextInput.View())
     footer := FooterStyle.Render("Enter to connect - Ctrl+c to quit")
     return inputBox, header, footer
+}
+
+func renderMonitorView(nav *Navigation, readNodeValue func(*ua.NodeID) (string, error))(string, string, string) {
+	header := HeaderStyle.Render("OPC UA Monitor")
+	content := ""
+	for i, node := range nav.CurrentNodes {
+		value, err := readNodeValue(node.NodeID)
+		if err != nil {
+			value = "Error reading value: " + err.Error()
+		}
+		if i == nav.Cursor {
+			content += SelectedStyle.Render("▸ " + node.BrowseName + " - Value: " + value + " - ID: " + node.NodeID.String()) + "\n"
+		} else {
+			content += "  " + node.BrowseName + " - Value " + value + " - ID: " + node.NodeID.String()+  "\n"
+		}
+	}
+	footer := FooterStyle.Render("\n[q]uit - toggle [m]onitor view")
+	return content, header, footer
 }
