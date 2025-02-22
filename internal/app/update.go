@@ -3,10 +3,15 @@ package app
 import (
 	"opcx/internal/opc"
 	"opcx/internal/ui"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/gopcua/opcua/ua"
 )
+
+type TickMsg struct{
+	t time.Time
+}
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -29,6 +34,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.recursiveView.viewport != nil {
 			m.recursiveView.viewport.Width = msg.Width
 			m.recursiveView.viewport.Height = msg.Height - verticalMarginHeight
+		}
+		if m.monitorView.viewport != nil {
+			m.monitorView.viewport.Width = msg.Width
+			m.monitorView.viewport.Height = msg.Height - verticalMarginHeight
 		}
 		return m, nil
 	case TransitionConnectToBrowseMsg:
@@ -58,6 +67,29 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case FetchChildrenMsg:
 		children := m.client.FetchChildren(msg.NodeID)
 		return m, children
+	case TransitionBrowseToMonitorMsg:
+		m.monitorView.nav.CurrentNodes = m.monitoredNodes
+		m.state = ui.ViewStateMonitor
+		return m, tea.Batch(
+			tick(),
+		)
+	case ToggleMonitorMsg:
+		if msg.Node.IsInSlice(m.monitoredNodes) {
+			for i, n := range m.monitoredNodes {
+				if n.NodeID == msg.Node.NodeID {
+					m.monitoredNodes = append(m.monitoredNodes[:i], m.monitoredNodes[i+1:]...)
+					break
+				}
+			}
+		} else {
+			m.monitoredNodes = append(m.monitoredNodes, msg.Node)
+		}
+		return m, nil
+	case TickMsg:
+		if m.state == ui.ViewStateMonitor {
+			return m, tick()
+		}
+		return m, nil
 	}
 	var newModel model
 	var cmd tea.Cmd
@@ -75,6 +107,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ui.ViewStateRecursive:
 		newModel = m
 		newModel.recursiveView, cmd = m.recursiveView.Update(msg)
+	case ui.ViewStateMonitor:
+		newModel = m
+		newModel.monitorView, cmd = m.monitorView.Update(msg)
 	default:
 		newModel = m
 		cmd = nil
@@ -82,4 +117,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return newModel, cmd
 }
 
-// TODO Define state transitions
+func tick() tea.Cmd {
+	return tea.Every(1*time.Second, func(t time.Time) tea.Msg {
+		return TickMsg{t,}
+	})
+}

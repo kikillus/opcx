@@ -5,6 +5,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+type ConnectionViewModel struct {
+	connectionTextInput textinput.Model
+	err                 error
+}
+
 func NewConnectionViewModel() ConnectionViewModel {
 	ti := textinput.New()
 	ti.Placeholder = "opc.tcp://127.0.0.1:4840"
@@ -48,3 +53,4 @@ func (m ConnectionViewModel) Update(msg tea.Msg) (ConnectionViewModel, tea.Cmd) 
 	m.connectionTextInput, cmd = m.connectionTextInput.Update(msg)
 	return m, cmd
 }
+

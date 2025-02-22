@@ -1,9 +1,16 @@
 package app
 
 import (
+	"opcx/internal/opc"
+
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+type DetailsViewModel struct {
+	viewport   *viewport.Model
+	activeNode opc.NodeDef
+}
 
 func NewDetailsViewModel() DetailsViewModel {
 	vp := viewport.New(0, 0)
@@ -35,3 +42,4 @@ func (m DetailsViewModel) Update(msg tea.Msg) (DetailsViewModel, tea.Cmd) {
 	}
 	return m, nil
 }
+
