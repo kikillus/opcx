@@ -34,7 +34,7 @@ func RenderView(state ViewState, nav *Navigation, activeNode opc.NodeDef, readNo
 }
 
 func renderRecursiveView(nav *Navigation) (string, string, string){
-	header := HeaderStyle.Render(fmt.Sprintf("All leaf children of: %s\n\n", nav.CurrentNode().BrowseName))
+	header := HeaderStyle.Render(fmt.Sprintf("All leaf children of: %s\n\n", nav.ActiveNode.BrowseName))
 	s := ""
 	for i, node := range nav.CurrentNodes{
 		cursor := " "
