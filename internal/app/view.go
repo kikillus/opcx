@@ -18,7 +18,7 @@ func (m model) View() string {
 	case ui.ViewStateConnection:
 		connectionTextInput = m.connectionView.connectionTextInput
 	}
-	content, header, footer := ui.RenderView(m.state, nav, m.activeNode, m.client.ReadNodeValue, connectionTextInput)
+	content, header, footer := ui.RenderView(m.state, nav, m.detailsView.activeNode, m.client.ReadNodeValue, connectionTextInput)
 
 	var rendered string
 	switch m.state {

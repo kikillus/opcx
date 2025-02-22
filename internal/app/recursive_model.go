@@ -4,8 +4,22 @@ import (
 	"opcx/internal/opc"
 	"opcx/internal/ui"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+func NewRecursiveViewModel() RecursiveViewModel {
+	vp := viewport.New(0, 0)
+	vp.YPosition = 3
+
+	return RecursiveViewModel{
+		nav: ui.NewNavigation(),
+		viewport: &vp,
+	}
+}
+
+type TransitionRecursiveToBrowseMsg struct {
+}
 
 func (m RecursiveViewModel) Update(msg tea.Msg) (RecursiveViewModel, tea.Cmd) {
 	if m.nav.Cursor < 0 {
@@ -44,25 +58,12 @@ func (m RecursiveViewModel) Update(msg tea.Msg) (RecursiveViewModel, tea.Cmd) {
 			}
 			return m, nil
 		case "c":
-			newModel := m
-			newModel.nav.Backward()
-			newCurrentNode := m.nav.CurrentNode()
-			return newModel, tea.Batch(
-				func() tea.Msg {
-					return ChangeViewStateMsg{NewState: ui.ViewStateBrowse}
-				},
-				func() tea.Msg {
-					return FetchChildrenMsg{NodeID: newCurrentNode.NodeID.String()}
-				},
-			)
+			return m, func () tea.Msg {
+				return TransitionRecursiveToBrowseMsg{}
+			}
 		}
 	case []opc.NodeDef:
 		newModel := m
-		if len(msg) == 0 {
-			newModel.nav.Path = m.nav.Path[:len(m.nav.Path)-1]
-			newModel.viewport.SetYOffset(0) // Reset viewport position
-			return newModel, nil
-		}
 		newModel.nav.CurrentNodes = msg
 		newModel.nav.Cursor = 0
 		newModel.viewport.SetYOffset(0) // Reset viewport position when loading new nodes

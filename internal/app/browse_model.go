@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/gopcua/opcua/ua"
 )
 
 func NewBrowseViewModel() BrowseViewModel {
@@ -18,18 +19,17 @@ func NewBrowseViewModel() BrowseViewModel {
 	}
 }
 
+type TransitionBrowseToDetailMsg struct {
+	nodeID *ua.NodeID
+}
+
+type TransitionBrowseToRecursiveMsg struct {
+	rootNode opc.NodeDef
+}
+
 type FetchChildrenMsg struct {
-	NodeID string
+	NodeID *ua.NodeID
 }
-
-type FetchChildrenRecursiveMsg struct {
-	NodeID string
-}
-
-type ChangeViewStateMsg struct {
-	NewState ui.ViewState
-}
-
 func (m BrowseViewModel) Update(msg tea.Msg) (BrowseViewModel, tea.Cmd) {
 	if m.nav.Cursor < 0 {
 		m.nav.Cursor = 0
@@ -74,32 +74,23 @@ func (m BrowseViewModel) Update(msg tea.Msg) (BrowseViewModel, tea.Cmd) {
 			newModel := m
 			currentNode := m.nav.CurrentNodes[m.nav.Cursor]
 			newModel.nav.Forward(m.nav.CurrentNodes[m.nav.Cursor])
-			return newModel, func() tea.Msg { return FetchChildrenMsg{NodeID: currentNode.NodeID.String()} } // FIXME
+			return newModel, func() tea.Msg { return FetchChildrenMsg{NodeID: currentNode.NodeID} }
 		case "left", "h":
 			newModel := m
 			if newModel.nav.Backward() {
 				newCurrentNode := m.nav.CurrentNode()
 				newModel := m
-				return newModel, func() tea.Msg { return FetchChildrenMsg{NodeID: newCurrentNode.NodeID.String()} } // FIXME
+				return newModel, func() tea.Msg { return FetchChildrenMsg{NodeID: newCurrentNode.NodeID} } // FIXME
 			}
 			return m, nil
 		case "v":
 			newModel := m
 			newModel.activeNode = m.nav.CurrentNodes[m.nav.Cursor]
-			return newModel, func() tea.Msg { return ChangeViewStateMsg{NewState: ui.ViewStateDetail} }
+			return newModel, func() tea.Msg { return TransitionBrowseToDetailMsg{nodeID: newModel.activeNode.NodeID} }
 		case "c":
 			newModel := m
 			currentNode := m.nav.CurrentNodes[m.nav.Cursor]
-			newModel.activeNode = currentNode
-			newModel.nav.Forward(m.nav.CurrentNodes[m.nav.Cursor])
-			return newModel, tea.Batch(
-				func() tea.Msg {
-					return FetchChildrenRecursiveMsg{NodeID: currentNode.NodeID.String()}
-				},
-				func() tea.Msg {
-					return ChangeViewStateMsg{NewState: ui.ViewStateRecursive}
-				},
-			)
+			return newModel, func() tea.Msg { return TransitionBrowseToRecursiveMsg{rootNode: currentNode} }
 		}
 	case []opc.NodeDef:
 		newModel := m

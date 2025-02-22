@@ -10,6 +10,7 @@ type Navigation struct {
 	Path         []opc.NodeDef
 	CurrentNodes []opc.NodeDef
 	Cursor       int
+	ActiveNode opc.NodeDef
 }
 
 func NewNavigation() *Navigation {

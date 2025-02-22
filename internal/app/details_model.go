@@ -1,8 +1,6 @@
 package app
 
 import (
-	"opcx/internal/ui"
-
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -16,6 +14,8 @@ func NewDetailsViewModel() DetailsViewModel {
 	}
 }
 
+type TransitionDetailToBrowseMsg struct {
+}
 func (m DetailsViewModel) Update(msg tea.Msg) (DetailsViewModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -27,10 +27,10 @@ func (m DetailsViewModel) Update(msg tea.Msg) (DetailsViewModel, tea.Cmd) {
 		case "q":
 			return m, tea.Quit
 		case "v":
-			newModel := m
-			return newModel, func() tea.Msg {
-				return ChangeViewStateMsg{NewState: ui.ViewStateBrowse}
+			return m, func() tea.Msg {
+				return TransitionDetailToBrowseMsg{}
 			}
+
 		}
 	}
 	return m, nil

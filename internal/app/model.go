@@ -53,18 +53,14 @@ type (
 )
 
 func InitialModel() model {
-	connectionText := textinput.New()
-	connectionText.Placeholder = "opc.tcp://127.0.0.1:4840"
-	connectionText.SetValue("opc.tcp://127.0.0.1:4840")
-	connectionText.CharLimit = 128
-	connectionText.Width = 50
-	connectionText.Focus()
 	vp := viewport.New(0, 0)
 	vp.YPosition = 3
 	return model{
+		state: ui.ViewStateConnection,
 		connectionView: NewConnectionViewModel(),
 		browseView: NewBrowseViewModel(),
 		detailsView: NewDetailsViewModel(),
+		recursiveView: NewRecursiveViewModel(),
 	}
 }
 

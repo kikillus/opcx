@@ -1,11 +1,8 @@
 package app
 
 import (
-	"opcx/internal/ui"
-
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/gopcua/opcua/ua"
 )
 
 func NewConnectionViewModel() ConnectionViewModel {
@@ -21,7 +18,8 @@ func NewConnectionViewModel() ConnectionViewModel {
 	}
 }
 
-type ConnectMsg struct {
+
+type TransitionConnectToBrowseMsg struct{
 	endpoint string
 }
 
@@ -39,17 +37,9 @@ func (m ConnectionViewModel) Update(msg tea.Msg) (ConnectionViewModel, tea.Cmd) 
 		case "enter":
 			newModel := m
 
-			return newModel, tea.Batch(
-				func() tea.Msg {
-					return ChangeViewStateMsg{NewState: ui.ViewStateBrowse}
-				},
-				func() tea.Msg {
-					return FetchChildrenMsg{NodeID: ua.NewNumericNodeID(0, 84).String()}
-				},
-				func() tea.Msg {
-					return ConnectMsg{endpoint: newModel.connectionTextInput.Value()}
-				},
-			)
+			return newModel, func() tea.Msg {
+					return TransitionConnectToBrowseMsg{endpoint: newModel.connectionTextInput.Value()}
+				}
 		}
 	case errMsg:
 		m.err = msg
